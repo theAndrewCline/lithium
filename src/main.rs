@@ -1,3 +1,4 @@
+use clap::Parser;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::env;
@@ -70,17 +71,24 @@ fn parse_command(args: &[String]) -> Command {
     }
 }
 
+/// Simple program to greet a person
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Name of the person to greet
+    #[arg(short, long)]
+    name: String,
+
+    /// Number of times to greet
+    #[arg(short, long, default_value_t = 1)]
+    count: u8,
+}
+
 #[tokio::main]
 async fn main() {
-    use Command::*;
-    let args: Vec<String> = env::args().collect();
-    let command: Command = parse_command(&args);
+    let args = Args::parse();
 
-    match command {
-        LIST => list_todos().await,
-        CREATE => create_todo(&args[2]).await,
-        COMPLETE => complete_todo(&args[2]).await,
-        DELETE => delete_todo(&args[2]).await,
-        HELP => println!("Please provide a command"),
+    for _ in 0..args.count {
+        println!("Hello {}!", args.name)
     }
 }
