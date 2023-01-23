@@ -1,7 +1,6 @@
-use clap::Parser;
+use clap::{Args, Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use serde_json;
-use std::env;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Todo {
@@ -23,7 +22,7 @@ async fn list_todos() {
     }
 }
 
-async fn create_todo(input: &str) {
+async fn create_todo(input: String) {
     let todo = Todo {
         id: uuid::Uuid::new_v4(),
         title: input.to_string(),
@@ -42,53 +41,54 @@ async fn create_todo(input: &str) {
     }
 }
 
-async fn complete_todo(todo: &str) {
+async fn complete_todo(todo: String) {
     println!("Completed: \"{}\"", todo)
 }
 
-async fn delete_todo(todo: &str) {
+async fn delete_todo(todo: String) {
     println!("Deleted: \"{}\"", todo)
 }
 
-enum Command {
-    LIST,
-    CREATE,
-    COMPLETE,
-    DELETE,
-    HELP,
+#[derive(Args, Debug)]
+struct CreateInput {
+    input: String,
 }
 
-fn parse_command(args: &[String]) -> Command {
-    use Command::*;
-    let command = &args[1] as &str;
+#[derive(Args, Debug)]
+struct CompleteInput {
+    id: String,
+}
 
-    match command {
-        "list" => LIST,
-        "create" => CREATE,
-        "complete" => COMPLETE,
-        "delete" => DELETE,
-        _ => HELP,
-    }
+#[derive(Args, Debug)]
+struct DeleteInput {
+    id: String,
+}
+
+#[derive(Debug, Subcommand)]
+enum ActionType {
+    List,
+    Create(CreateInput),
+    Complete(CompleteInput),
+    Delete(DeleteInput),
 }
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
-struct Args {
-    /// Name of the person to greet
-    #[arg(short, long)]
-    name: String,
-
-    /// Number of times to greet
-    #[arg(short, long, default_value_t = 1)]
-    count: u8,
+struct LithiumArgs {
+    /// List todos
+    #[clap(subcommand)]
+    action: ActionType,
 }
 
 #[tokio::main]
 async fn main() {
-    let args = Args::parse();
+    let args = LithiumArgs::parse();
 
-    for _ in 0..args.count {
-        println!("Hello {}!", args.name)
+    match args.action {
+        ActionType::List => list_todos().await,
+        ActionType::Create(x) => create_todo(x.input).await,
+        ActionType::Complete(x) => complete_todo(x.id).await,
+        ActionType::Delete(x) => delete_todo(x.id).await,
     }
 }
