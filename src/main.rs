@@ -1,3 +1,7 @@
+mod cli;
+
+use cli::Program;
+
 use clap::{Args, Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -83,12 +87,5 @@ struct LithiumArgs {
 
 #[tokio::main]
 async fn main() {
-    let args = LithiumArgs::parse();
-
-    match args.action {
-        ActionType::List => list_todos().await,
-        ActionType::Create(x) => create_todo(x.input).await,
-        ActionType::Complete(x) => complete_todo(x.id).await,
-        ActionType::Delete(x) => delete_todo(x.id).await,
-    }
+    let args = Program::parse();
 }
