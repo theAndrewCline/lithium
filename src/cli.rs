@@ -1,6 +1,8 @@
 use clap::{Args, Parser, Subcommand};
 use std::fmt::Error;
 
+use crate::todo::TodoStore;
+
 pub struct Todo {}
 
 pub trait DatabaseAdapter {
@@ -27,7 +29,6 @@ struct DeleteInput {
 
 #[derive(Debug, Subcommand)]
 enum ActionType {
-
     /// List todos
     List,
     /// Create todo
@@ -45,7 +46,7 @@ pub struct Program {
     action: ActionType,
 }
 
-pub fn run() {
+pub fn run(store: &TodoStore) {
     let program = Program::parse();
 
     match program {

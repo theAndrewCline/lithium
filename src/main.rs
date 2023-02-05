@@ -1,8 +1,11 @@
 mod cli;
+mod todo;
 
-use clap::{Args, Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use serde_json;
+
+use surrealdb::{Datastore, Error};
+use todo::TodoStore;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Todo {
@@ -51,39 +54,11 @@ async fn delete_todo(todo: String) {
     println!("Deleted: \"{}\"", todo)
 }
 
-#[derive(Args, Debug)]
-struct CreateInput {
-    input: String,
-}
-
-#[derive(Args, Debug)]
-struct CompleteInput {
-    id: String,
-}
-
-#[derive(Args, Debug)]
-struct DeleteInput {
-    id: String,
-}
-
-#[derive(Debug, Subcommand)]
-enum ActionType {
-    List,
-    Create(CreateInput),
-    Complete(CompleteInput),
-    Delete(DeleteInput),
-}
-
-/// Simple program to greet a person
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct LithiumArgs {
-    /// List todos
-    #[clap(subcommand)]
-    action: ActionType,
-}
-
 #[tokio::main]
-async fn main() {
-    cli::run()
+async fn main() -> Result<(), Error> {
+    let store = TodoStore::new(Datastore::new("memory").await?);
+
+    cli::run(&store);
+
+    Ok(())
 }
