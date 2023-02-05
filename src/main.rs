@@ -1,7 +1,5 @@
 mod cli;
 
-use cli::Program;
-
 use clap::{Args, Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -87,5 +85,5 @@ struct LithiumArgs {
 
 #[tokio::main]
 async fn main() {
-    let args = Program::parse();
+    cli::run()
 }
