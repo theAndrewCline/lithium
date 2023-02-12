@@ -49,7 +49,8 @@ pub struct Program {
 pub fn run(store: &TodoStore) {
     let program = Program::parse();
 
-    match program {
+    match program.action {
+        ActionType::List => println!("list action"),
         _ => println!("it's working"),
     }
 }
