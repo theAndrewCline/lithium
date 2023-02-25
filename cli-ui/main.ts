@@ -1,8 +1,7 @@
-export function add(a: number, b: number): number {
-  return a + b;
-}
+import { Command } from "https://deno.land/x/cliffy@v0.25.7/mod.ts";
 
-// Learn more at https://deno.land/manual/examples/module_metadata#concepts
-if (import.meta.main) {
-  console.log("Add 2 + 3 =", add(2, 3));
-}
+const cmd = await new Command()
+  .name("lithium")
+  .version("0.1.0")
+  .description("Commandline ui for lithium todos")
+  .parse(Deno.args);
