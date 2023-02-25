@@ -1,8 +1,16 @@
-export function add(a: number, b: number): number {
-  return a + b;
-}
+import { Application, Router } from "https://deno.land/x/oak@v11.1.0/mod.ts";
 
-// Learn more at https://deno.land/manual/examples/module_metadata#concepts
-if (import.meta.main) {
-  console.log("Add 2 + 3 =", add(2, 3));
-}
+const router = new Router();
+
+router.get("/", (ctx) => {
+  ctx.response.body = JSON.stringify({
+    hello: "there",
+  });
+});
+
+const app = new Application();
+
+app.use(router.routes());
+app.use(router.allowedMethods());
+
+app.listen({ port: 8080 });
