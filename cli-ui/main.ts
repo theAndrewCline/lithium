@@ -5,3 +5,5 @@ const _cmd = await new Command()
   .version("0.1.0")
   .description("Commandline ui for lithium todos")
   .parse(Deno.args);
+
+export const add = (a: number, b: number) => a + b;
