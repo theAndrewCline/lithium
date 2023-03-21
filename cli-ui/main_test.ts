@@ -10,5 +10,5 @@ Deno.test(function nextAddTest() {
 });
 
 Deno.test(function sanity() {
-  assertEquals(true, true);
+  assertEquals(true, false);
 });
