@@ -1,0 +1,17 @@
+[package]
+name = "rust-todo-service"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = "0.6.12"
+mongodb = "2.4.0"
+serde = { version = "1.0.158", features = ["derive"] }
+tokio = "1.26.0"
+tracing = "0.1.37"
+tracing-subscriber = "0.3.16"
+
+[dev-dependencies]
+axum-test-helper = "0.2.0"
