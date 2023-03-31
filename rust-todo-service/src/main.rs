@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tracing;
 use tracing_subscriber;
 
-fn make_app() -> Router {
+fn make_router() -> Router {
     Router::new().route("/", get(list_todos))
 }
 
@@ -16,7 +16,7 @@ async fn main() {
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 4000));
 
-    let app = make_app();
+    let app = make_router();
 
     tracing::debug!("listening on {}", addr);
 
@@ -48,7 +48,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_todos_empty() {
-        let app = make_app();
+        let app = make_router();
 
         let client = TestClient::new(app);
         let res = client.get("/").send().await;
