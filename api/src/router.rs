@@ -3,14 +3,8 @@ use axum::{
     routing::{get, post, IntoMakeService},
     Json, Router,
 };
-use cuid::cuid2;
 use serde::{Deserialize, Serialize};
-use todo::Todo;
-
-use crate::{
-    db_helpers::{db_response_to_todo, DbResult, TodoDatabaseResponse},
-    DB,
-};
+use todo::{create_todo, delete_todo, list_todos, update_todo, CreateTodoInput, Todo};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct TodoListResponse {
@@ -29,11 +23,8 @@ enum ApiResponse {
     Error(String),
 }
 
-async fn list_todos() -> (StatusCode, Json<ApiResponse>) {
-    let result: DbResult<Vec<TodoDatabaseResponse>> = DB.select("todo").await;
-
-    let todos: DbResult<Vec<Todo>> =
-        result.map(|ts| ts.iter().map(|t| db_response_to_todo(t)).collect());
+async fn list_todos_route() -> (StatusCode, Json<ApiResponse>) {
+    let todos = list_todos().await;
 
     match todos {
         Ok(todos) => (StatusCode::OK, Json(ApiResponse::Todos(todos))),
@@ -48,15 +39,10 @@ async fn list_todos() -> (StatusCode, Json<ApiResponse>) {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-struct CreateTodoInput {
-    pub text: String,
-}
-
-async fn create_todo(Json(payload): Json<CreateTodoInput>) -> StatusCode {
+async fn create_todo_route(Json(payload): Json<CreateTodoInput>) -> StatusCode {
     tracing::info!("payload: {:?}", payload);
-    let result: DbResult<Option<TodoDatabaseResponse>> =
-        DB.create(("todo", cuid2())).content(payload).await;
+
+    let result = create_todo(payload).await;
 
     match result {
         Ok(_) => StatusCode::CREATED,
@@ -67,13 +53,10 @@ async fn create_todo(Json(payload): Json<CreateTodoInput>) -> StatusCode {
     }
 }
 
-async fn update_todo(Json(payload): Json<Todo>) -> StatusCode {
+async fn update_todo_route(Json(payload): Json<Todo>) -> StatusCode {
     tracing::info!("payload: {:?}", payload);
 
-    let todo_id = payload.id.clone();
-
-    let result: DbResult<TodoDatabaseResponse> =
-        DB.update(("todo", todo_id)).content(payload).await;
+    let result = update_todo(payload).await;
 
     match result {
         Ok(_) => StatusCode::OK,
@@ -85,10 +68,10 @@ async fn update_todo(Json(payload): Json<Todo>) -> StatusCode {
     }
 }
 
-async fn delete_todo(Json(payload): Json<Todo>) -> StatusCode {
+async fn delete_todo_route(Json(payload): Json<Todo>) -> StatusCode {
     tracing::info!("payload: {:?}", payload);
 
-    let result: DbResult<Option<TodoDatabaseResponse>> = DB.delete(("todo", payload.id)).await;
+    let result = delete_todo(payload).await;
 
     match result {
         Ok(_) => StatusCode::OK,
@@ -102,9 +85,9 @@ async fn delete_todo(Json(payload): Json<Todo>) -> StatusCode {
 
 pub fn make_router() -> IntoMakeService<Router> {
     Router::new()
-        .route("/", get(list_todos))
-        .route("/create", post(create_todo))
-        .route("/update", post(update_todo))
-        .route("/delete", post(delete_todo))
+        .route("/", get(list_todos_route))
+        .route("/create", post(create_todo_route))
+        .route("/update", post(update_todo_route))
+        .route("/delete", post(delete_todo_route))
         .into_make_service()
 }

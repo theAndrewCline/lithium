@@ -1,12 +1,9 @@
-mod db_helpers;
 mod router;
 
 use router::make_router;
 use std::net::SocketAddr;
-use surrealdb::engine::any::Any;
-use surrealdb::Surreal;
 
-static DB: Surreal<Any> = Surreal::init();
+use ::todo::DB;
 
 #[tokio::main]
 async fn main() -> surrealdb::Result<()> {
