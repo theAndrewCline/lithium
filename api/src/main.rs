@@ -3,7 +3,7 @@ mod router;
 use router::make_router;
 use std::net::SocketAddr;
 
-use ::todo::DB;
+use todo::DB;
 
 #[tokio::main]
 async fn main() -> surrealdb::Result<()> {
