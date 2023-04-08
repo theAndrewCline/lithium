@@ -13,7 +13,7 @@ pub struct TodoDatabaseResponse {
 
 pub fn db_response_to_todo(response: &TodoDatabaseResponse) -> Todo {
     Todo {
-        id: response.id.to_string(),
+        id: response.id.id.to_string(),
         text: response.text.clone(),
     }
 }

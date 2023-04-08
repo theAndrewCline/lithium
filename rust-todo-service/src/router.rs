@@ -13,22 +13,37 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct TodoResponse {
+struct TodoListResponse {
     todos: Vec<Todo>,
 }
 
-async fn list_todos() -> (StatusCode, Json<TodoResponse>) {
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+struct ErrorResponse {
+    message: String,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+enum ApiResponse {
+    Todos(Vec<Todo>),
+    Todo(Todo),
+    Error(String),
+}
+
+async fn list_todos() -> (StatusCode, Json<ApiResponse>) {
     let result: DbResult<Vec<TodoDatabaseResponse>> = DB.select("todo").await;
 
     let todos: DbResult<Vec<Todo>> =
         result.map(|ts| ts.iter().map(|t| db_response_to_todo(t)).collect());
 
     match todos {
-        Ok(todos) => (StatusCode::OK, Json(TodoResponse { todos })),
+        Ok(todos) => (StatusCode::OK, Json(ApiResponse::Todos(todos))),
         Err(err) => {
             tracing::error!("error listing todos: {}", err);
 
-            return (StatusCode::OK, Json(TodoResponse { todos: vec![] }));
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::Error(String::from("could not get todos"))),
+            );
         }
     }
 }
@@ -55,7 +70,10 @@ async fn create_todo(Json(payload): Json<CreateTodoInput>) -> StatusCode {
 async fn update_todo(Json(payload): Json<Todo>) -> StatusCode {
     tracing::info!("payload: {:?}", payload);
 
-    let result: DbResult<Vec<TodoDatabaseResponse>> = DB.update("todo").content(payload).await;
+    let todo_id = payload.id.clone();
+
+    let result: DbResult<TodoDatabaseResponse> =
+        DB.update(("todo", todo_id)).content(payload).await;
 
     match result {
         Ok(_) => StatusCode::OK,
