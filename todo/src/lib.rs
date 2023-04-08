@@ -5,3 +5,6 @@ pub struct Todo {
     pub id: String,
     pub text: String,
 }
+
+#[cfg(test)]
+mod tests {}

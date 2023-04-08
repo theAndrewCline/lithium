@@ -5,13 +5,6 @@ use crate::todo::TodoStore;
 
 pub struct Todo {}
 
-pub trait DatabaseAdapter {
-    fn create(todo: Todo) -> Result<Todo, Error>;
-    fn update(todo: Todo) -> Result<Todo, Error>;
-    fn delete(todo: Todo) -> Result<Todo, Error>;
-    fn list() -> Result<Vec<Todo>, Error>;
-}
-
 #[derive(Args, Debug)]
 struct CreateInput {
     input: String,

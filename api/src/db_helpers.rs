@@ -1,7 +1,6 @@
-use crate::todos::Todo;
-
 use serde::{Deserialize, Serialize};
 use surrealdb::sql::Thing;
+use todo::Todo;
 
 pub type DbResult<T> = Result<T, surrealdb::Error>;
 

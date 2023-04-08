@@ -1,6 +1,5 @@
 mod db_helpers;
 mod router;
-mod todos;
 
 use router::make_router;
 use std::net::SocketAddr;

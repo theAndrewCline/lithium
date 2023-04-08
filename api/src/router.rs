@@ -5,10 +5,10 @@ use axum::{
 };
 use cuid::cuid2;
 use serde::{Deserialize, Serialize};
+use todo::Todo;
 
 use crate::{
     db_helpers::{db_response_to_todo, DbResult, TodoDatabaseResponse},
-    todos::Todo,
     DB,
 };
 

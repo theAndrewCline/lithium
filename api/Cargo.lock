@@ -1246,6 +1246,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d59d8c75012853d2e872fb56bc8a2e53718e2cafe1a4c823143141c6d90c322f"
 
 [[package]]
+name = "lithium-api"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "axum-test-helper",
+ "cuid",
+ "serde",
+ "surrealdb",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1821,20 +1835,6 @@ dependencies = [
  "heapless",
  "num-traits",
  "smallvec",
-]
-
-[[package]]
-name = "rust-todo-service"
-version = "0.1.0"
-dependencies = [
- "axum",
- "axum-test-helper",
- "cuid",
- "serde",
- "surrealdb",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
