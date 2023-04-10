@@ -11,7 +11,14 @@ async fn main() -> surrealdb::Result<()> {
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 4000));
 
-    DB.connect("mem://").await?;
+    let db_directory = format!(
+        "{}{}/.lithium",
+        "file://",
+        std::env::var("HOME").expect("HOME directory should be defined")
+    );
+
+    DB.connect(db_directory).await?;
+
     DB.use_ns("lithium").use_db("lithium").await?;
 
     tracing::info!("listening on {}", addr);
