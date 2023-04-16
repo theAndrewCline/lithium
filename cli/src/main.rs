@@ -1,23 +1,28 @@
 mod cli;
-use surrealdb::Error;
 
 use cli::run;
-
+use std::io::{self, StdoutLock, Write};
 use todo::DB;
 
 #[tokio::main]
-async fn main() -> Result<(), Error> {
+async fn main() {
     let db_directory = format!(
         "{}{}/.lithium",
         "file://",
         std::env::var("HOME").expect("HOME directory should be defined")
     );
 
-    DB.connect(db_directory).await?;
+    let stdout = io::stdout(); // get the global stdout entity
+    let mut handle: StdoutLock<'static> = stdout.lock(); // acquire a lock on it
 
-    DB.use_ns("lithium").use_db("lithium").await?;
+    DB.connect(db_directory).await.expect("database connection");
 
-    run().await;
+    DB.use_ns("lithium")
+        .use_db("lithium")
+        .await
+        .expect("namespace declaration");
 
-    Ok(())
+    run(&mut handle).await;
+
+    handle.flush().expect("write to stdout");
 }

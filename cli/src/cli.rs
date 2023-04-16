@@ -1,3 +1,5 @@
+use std::io::{StdoutLock, Write};
+
 use clap::{Args, Parser, Subcommand};
 
 use todo::{create_todo, list_todos, CreateTodoPayload};
@@ -36,7 +38,7 @@ pub struct Program {
     action: ActionType,
 }
 
-pub async fn run() {
+pub async fn run(handle: &mut StdoutLock<'static>) {
     let program = Program::parse();
 
     match program.action {
@@ -44,7 +46,8 @@ pub async fn run() {
             let todos = list_todos().await.expect("fetch todos");
 
             for todo in todos {
-                println!("{}", todo.text)
+                writeln!(handle, "{}: {}", todo.referance, todo.text)
+                    .expect("writing to io to work");
             }
         }
 

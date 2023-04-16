@@ -13,6 +13,7 @@ serde_json = "1.0.78"
 surrealdb = { version = "1.0.0-beta.9" }
 tokio = { version = "1.16.1", features = ["macros","rt-multi-thread"] }
 todo = { path = "../todo" }
+concolor = "0.1.1"
 
 [dev-dependencies]
 assert_cmd = "2.0.8"
