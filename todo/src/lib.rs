@@ -18,13 +18,26 @@ pub async fn list_todos() -> DbResult<Vec<Todo>> {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct CreateTodoInput {
+pub struct CreateTodoPayload {
     pub text: String,
 }
 
-pub async fn create_todo(payload: CreateTodoInput) -> DbResult<TodoDatabaseResponse> {
-    let result: DbResult<TodoDatabaseResponse> =
-        DB.create(("todo", cuid2())).content(payload).await;
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CreateTodoInput {
+    pub text: String,
+    pub referance: u32,
+}
+
+pub async fn create_todo(payload: CreateTodoPayload) -> DbResult<TodoDatabaseResponse> {
+    let next_referance = 1;
+
+    let result: DbResult<TodoDatabaseResponse> = DB
+        .create(("todo", cuid2()))
+        .content(CreateTodoInput {
+            text: payload.text,
+            referance: next_referance,
+        })
+        .await;
 
     return result;
 }
@@ -48,6 +61,7 @@ pub async fn delete_todo(payload: Todo) -> DbResult<TodoDatabaseResponse> {
 pub struct Todo {
     pub id: String,
     pub text: String,
+    pub referance: u32,
 }
 
 #[cfg(test)]

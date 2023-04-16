@@ -1,6 +1,6 @@
 use clap::{Args, Parser, Subcommand};
 
-use todo::list_todos;
+use todo::{create_todo, list_todos, CreateTodoPayload};
 
 #[derive(Args, Debug)]
 struct CreateInput {
@@ -23,10 +23,10 @@ enum ActionType {
     List,
     /// Create todo
     Create(CreateInput),
-    /// Complete todo
-    Complete(CompleteInput),
-    /// Delete todo
-    Delete(DeleteInput),
+    // /// Complete todo
+    // Complete(CompleteInput),
+    // /// Delete todo
+    // Delete(DeleteInput),
 }
 
 #[derive(Debug, Parser)]
@@ -47,6 +47,15 @@ pub async fn run() {
                 println!("{}", todo.text)
             }
         }
-        _ => println!("it's working"),
+
+        ActionType::Create(input) => {
+            create_todo(CreateTodoPayload {
+                text: input.input.clone(),
+            })
+            .await
+            .expect("todo to be created");
+
+            println!("Created todo! {}", input.input);
+        }
     }
 }

@@ -4,7 +4,7 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use todo::{create_todo, delete_todo, list_todos, update_todo, CreateTodoInput, Todo};
+use todo::{create_todo, delete_todo, list_todos, update_todo, CreateTodoPayload, Todo};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct TodoListResponse {
@@ -39,7 +39,7 @@ async fn list_todos_route() -> (StatusCode, Json<ApiResponse>) {
     }
 }
 
-async fn create_todo_route(Json(payload): Json<CreateTodoInput>) -> StatusCode {
+async fn create_todo_route(Json(payload): Json<CreateTodoPayload>) -> StatusCode {
     tracing::info!("payload: {:?}", payload);
 
     let result = create_todo(payload).await;

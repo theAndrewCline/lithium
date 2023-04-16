@@ -9,11 +9,13 @@ pub type DbResult<T> = Result<T, surrealdb::Error>;
 pub struct TodoDatabaseResponse {
     id: Thing,
     text: String,
+    referance: u32,
 }
 
 pub fn db_response_to_todo(response: &TodoDatabaseResponse) -> Todo {
     Todo {
         id: response.id.id.to_string(),
         text: response.text.clone(),
+        referance: response.referance.clone(),
     }
 }
