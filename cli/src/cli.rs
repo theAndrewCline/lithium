@@ -1,9 +1,6 @@
 use clap::{Args, Parser, Subcommand};
-use std::fmt::Error;
 
-use crate::todo::TodoStore;
-
-pub struct Todo {}
+use todo::list_todos;
 
 #[derive(Args, Debug)]
 struct CreateInput {
@@ -39,11 +36,17 @@ pub struct Program {
     action: ActionType,
 }
 
-pub fn run(store: &TodoStore) {
+pub async fn run() {
     let program = Program::parse();
 
     match program.action {
-        ActionType::List => println!("list action"),
+        ActionType::List => {
+            let todos = list_todos().await.expect("fetch todos");
+
+            for todo in todos {
+                println!("{}", todo.text)
+            }
+        }
         _ => println!("it's working"),
     }
 }
