@@ -28,14 +28,48 @@ pub struct CreateTodoInput {
     pub referance: u32,
 }
 
-pub async fn create_todo(payload: CreateTodoPayload) -> DbResult<TodoDatabaseResponse> {
-    let next_referance = 1;
+#[derive(Serialize, Deserialize, Debug)]
+struct Referance {
+    referance: u32,
+}
 
+pub async fn next_referance() -> u32 {
+    let result: DbResult<Option<Referance>> = DB.select(("referance", "static")).await;
+
+    let next_referance = result.expect("to have result");
+
+    match next_referance {
+        Some(r) => {
+            let next_ref: DbResult<Referance> = DB
+                .update(("referance", "static"))
+                .content(Referance {
+                    referance: r.referance + 1,
+                })
+                .await;
+
+            next_ref.expect("next ref should be succesfully created");
+
+            return r.referance;
+        }
+        None => {
+            let next_ref: DbResult<Referance> = DB
+                .update(("referance", "static"))
+                .content(Referance { referance: 2 })
+                .await;
+
+            next_ref.expect("next ref should be succesfully created");
+
+            return 1;
+        }
+    }
+}
+
+pub async fn create_todo(payload: CreateTodoPayload) -> DbResult<TodoDatabaseResponse> {
     let result: DbResult<TodoDatabaseResponse> = DB
         .create(("todo", cuid2()))
         .content(CreateTodoInput {
             text: payload.text,
-            referance: next_referance,
+            referance: next_referance().await,
         })
         .await;
 
