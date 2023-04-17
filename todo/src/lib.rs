@@ -11,8 +11,13 @@ pub static DB: Surreal<Any> = Surreal::init();
 pub async fn list_todos() -> DbResult<Vec<Todo>> {
     let result: DbResult<Vec<TodoDatabaseResponse>> = DB.select("todo").await;
 
-    let todos: DbResult<Vec<Todo>> =
-        result.map(|ts| ts.iter().map(|t| db_response_to_todo(t)).collect());
+    let todos: DbResult<Vec<Todo>> = result
+        .map(|ts| ts.iter().map(|t| db_response_to_todo(t)).collect())
+        .map(|mut todos: Vec<Todo>| {
+            todos.sort_by(|a, b| a.referance.cmp(&b.referance));
+
+            return todos;
+        });
 
     return todos;
 }
