@@ -6,6 +6,14 @@ use serde::{Deserialize, Serialize};
 use surrealdb::engine::any::Any;
 use surrealdb::Surreal;
 
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub struct Todo {
+    pub id: String,
+    pub text: String,
+    pub referance: u32,
+    pub complete: bool,
+}
+
 pub static DB: Surreal<Any> = Surreal::init();
 
 pub async fn list_todos() -> DbResult<Vec<Todo>> {
@@ -94,13 +102,6 @@ pub async fn delete_todo(payload: Todo) -> DbResult<TodoDatabaseResponse> {
     let result: DbResult<TodoDatabaseResponse> = DB.delete(("todo", payload.id)).await;
 
     return result;
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub struct Todo {
-    pub id: String,
-    pub text: String,
-    pub referance: u32,
 }
 
 #[cfg(test)]

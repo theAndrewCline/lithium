@@ -10,6 +10,7 @@ pub struct TodoDatabaseResponse {
     id: Thing,
     text: String,
     referance: u32,
+    complete: bool,
 }
 
 pub fn db_response_to_todo(response: &TodoDatabaseResponse) -> Todo {
@@ -17,5 +18,6 @@ pub fn db_response_to_todo(response: &TodoDatabaseResponse) -> Todo {
         id: response.id.id.to_string(),
         text: response.text.clone(),
         referance: response.referance.clone(),
+        complete: response.complete.clone(),
     }
 }
