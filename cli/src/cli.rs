@@ -2,7 +2,7 @@ use std::io::{StdoutLock, Write};
 
 use clap::{Args, Parser, Subcommand};
 
-use todo::{create_todo, list_todos, CreateTodoPayload};
+use todo::{create_todo, delete_todo_by_ref, list_todos, CreateTodoPayload};
 
 #[derive(Args, Debug)]
 struct CreateInput {
@@ -16,7 +16,7 @@ struct CompleteInput {
 
 #[derive(Args, Debug)]
 struct DeleteInput {
-    id: String,
+    referance: String,
 }
 
 #[derive(Debug, Subcommand)]
@@ -27,8 +27,8 @@ enum ActionType {
     Create(CreateInput),
     // /// Complete todo
     // Complete(CompleteInput),
-    // /// Delete todo
-    // Delete(DeleteInput),
+    /// Delete todo
+    Delete(DeleteInput),
 }
 
 #[derive(Debug, Parser)]
@@ -58,7 +58,12 @@ pub async fn run(handle: &mut StdoutLock<'static>) {
             .await
             .expect("todo to be created");
 
-            println!("Created todo! {}", input.input);
+            writeln!(handle, "Created todo! {}", input.input).expect("writing should work");
         }
+
+        ActionType::Delete(input) => match delete_todo_by_ref(input.referance).await {
+            Ok(_) => writeln!(handle, "Delete successful!").expect("writing should work"),
+            _ => writeln!(handle, "Delete failed").expect("writing should work"),
+        },
     }
 }

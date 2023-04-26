@@ -1,5 +1,7 @@
 pub mod db_helpers;
 
+use std::error::Error;
+
 use cuid::cuid2;
 use db_helpers::{db_response_to_todo, DbResult, TodoDatabaseResponse};
 use serde::{Deserialize, Serialize};
@@ -39,6 +41,7 @@ pub struct CreateTodoPayload {
 pub struct CreateTodoInput {
     pub text: String,
     pub referance: u32,
+    pub complete: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -83,6 +86,7 @@ pub async fn create_todo(payload: CreateTodoPayload) -> DbResult<TodoDatabaseRes
         .content(CreateTodoInput {
             text: payload.text,
             referance: next_referance().await,
+            complete: false,
         })
         .await;
 
@@ -98,11 +102,23 @@ pub async fn update_todo(payload: Todo) -> DbResult<TodoDatabaseResponse> {
     return result;
 }
 
-pub async fn delete_todo(payload: Todo) -> DbResult<TodoDatabaseResponse> {
-    let result: DbResult<TodoDatabaseResponse> = DB.delete(("todo", payload.id)).await;
+pub async fn delete_todo_by_id(id: String) -> DbResult<TodoDatabaseResponse> {
+    let result: DbResult<TodoDatabaseResponse> = DB.delete(("todo", id)).await;
 
     return result;
 }
 
-#[cfg(test)]
-mod tests {}
+pub async fn delete_todo_by_ref(ref_str: String) -> Result<Todo, std::error::Error> {
+    let select_result: DbResult<Option<TodoDatabaseResponse>> = DB
+        .query("SELECT * FROM todo WHERE referance = $ref")
+        .bind(("ref", ref_str))
+        .await
+        .map(|mut r| r.take(0))?;
+
+    let todo = select_result.map(|o| o.map(|t| db_response_to_todo(&t)));
+
+    match todo {
+        Ok(todo) => DB.delete(("todo", todo.id)).await,
+        _ => return Error("Not Found"),
+    }
+}
