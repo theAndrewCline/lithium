@@ -1,7 +1,5 @@
 pub mod db_helpers;
 
-use std::error::Error;
-
 use cuid::cuid2;
 use db_helpers::{db_response_to_todo, DbResult, TodoDatabaseResponse};
 use serde::{Deserialize, Serialize};
@@ -108,17 +106,31 @@ pub async fn delete_todo_by_id(id: String) -> DbResult<TodoDatabaseResponse> {
     return result;
 }
 
-pub async fn delete_todo_by_ref(ref_str: String) -> Result<Todo, std::error::Error> {
+pub enum LithiumError {
+    Db(surrealdb::Error),
+    NotFound,
+}
+
+pub async fn delete_todo_by_ref(ref_str: String) -> Result<Todo, LithiumError> {
     let select_result: DbResult<Option<TodoDatabaseResponse>> = DB
         .query("SELECT * FROM todo WHERE referance = $ref")
         .bind(("ref", ref_str))
         .await
-        .map(|mut r| r.take(0))?;
+        .map(|mut r| r.take(0))
+        .map_err(|e| LithiumError::Db(e))?;
 
     let todo = select_result.map(|o| o.map(|t| db_response_to_todo(&t)));
 
     match todo {
-        Ok(todo) => DB.delete(("todo", todo.id)).await,
-        _ => return Error("Not Found"),
+        Ok(t) => {
+            if t.is_none() {
+                return Err(LithiumError::NotFound);
+            }
+
+            return Ok(t.unwrap());
+        }
+        Err(err) => {
+            return Err(LithiumError::Db(err));
+        }
     }
 }

@@ -4,7 +4,7 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use todo::{create_todo, delete_todo, list_todos, update_todo, CreateTodoPayload, Todo};
+use todo::{create_todo, delete_todo_by_id, list_todos, update_todo, CreateTodoPayload, Todo};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct TodoListResponse {
@@ -68,10 +68,15 @@ async fn update_todo_route(Json(payload): Json<Todo>) -> StatusCode {
     }
 }
 
-async fn delete_todo_route(Json(payload): Json<Todo>) -> StatusCode {
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+struct TodoId {
+    id: String,
+}
+
+async fn delete_todo_route(Json(payload): Json<TodoId>) -> StatusCode {
     tracing::info!("payload: {:?}", payload);
 
-    let result = delete_todo(payload).await;
+    let result = delete_todo_by_id(payload.id).await;
 
     match result {
         Ok(_) => StatusCode::OK,
