@@ -25,7 +25,7 @@ enum ActionType {
     List,
     /// Create todo
     Create(CreateInput),
-    // /// Complete todo
+    /// Complete todo
     // Complete(CompleteInput),
     /// Delete todo
     Delete(DeleteInput),

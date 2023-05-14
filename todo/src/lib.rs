@@ -106,31 +106,29 @@ pub async fn delete_todo_by_id(id: String) -> DbResult<TodoDatabaseResponse> {
     return result;
 }
 
+#[derive(Debug)]
 pub enum LithiumError {
     Db(surrealdb::Error),
     NotFound,
 }
 
-pub async fn delete_todo_by_ref(ref_str: String) -> Result<Todo, LithiumError> {
+pub async fn delete_todo_by_ref(ref_str: String) -> Result<(), LithiumError> {
     let select_result: DbResult<Option<TodoDatabaseResponse>> = DB
         .query("SELECT * FROM todo WHERE referance = $ref")
         .bind(("ref", ref_str))
         .await
         .map(|mut r| r.take(0))
-        .map_err(|e| LithiumError::Db(e))?;
+        .map_err(|e| LithiumError::Db(e))
+        .expect("to not explode");
 
-    let todo = select_result.map(|o| o.map(|t| db_response_to_todo(&t)));
+    let todo = select_result.and_then(|res| match res {
+        Some(t) => Ok(t),
+        None => Error(LithiumError::NotFound),
+    });
 
-    match todo {
-        Ok(t) => {
-            if t.is_none() {
-                return Err(LithiumError::NotFound);
-            }
+    Ok(())
+}
 
-            return Ok(t.unwrap());
-        }
-        Err(err) => {
-            return Err(LithiumError::Db(err));
-        }
-    }
+pub async fn complete_todo_by_ref(ref_str: String) -> Result<(), LithiumError> {
+    Ok(())
 }
