@@ -39,18 +39,13 @@ async fn list_todos_route() -> (StatusCode, Json<ApiResponse>) {
     }
 }
 
-async fn create_todo_route(Json(payload): Json<CreateTodoPayload>) -> StatusCode {
-    tracing::info!("payload: {:?}", payload);
-
-    let result = create_todo(payload).await;
-
-    match result {
-        Ok(_) => StatusCode::CREATED,
-        Err(err) => {
-            tracing::error!("error creating todo: {}", err);
-            return StatusCode::INTERNAL_SERVER_ERROR;
-        }
-    }
+async fn create_todo_route(
+    Json(payload): Json<CreateTodoPayload>,
+) -> Result<StatusCode, StatusCode> {
+    create_todo(payload)
+        .await
+        .map(|_| StatusCode::CREATED)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
 async fn update_todo_route(Json(payload): Json<Todo>) -> StatusCode {

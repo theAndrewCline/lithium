@@ -1,7 +1,7 @@
 pub mod db_helpers;
 
 use cuid::cuid2;
-use db_helpers::{db_response_to_todo, DbResult, TodoDatabaseResponse};
+use db_helpers::{db_response_to_todo, TodoDatabaseResponse};
 use serde::{Deserialize, Serialize};
 use surrealdb::engine::any::Any;
 use surrealdb::Surreal;
@@ -16,21 +16,16 @@ pub struct Todo {
 
 pub static DB: Surreal<Any> = Surreal::init();
 
-pub async fn list_todos() -> DbResult<Vec<Todo>> {
-    let result: DbResult<Vec<TodoDatabaseResponse>> = DB.select("todo").await;
-
-    let todos: DbResult<Vec<Todo>> = result
-        .map(|ts| ts.iter().map(|t| db_response_to_todo(t)).collect())
-        .map(|mut todos: Vec<Todo>| {
-            todos.sort_by(|a, b| a.referance.cmp(&b.referance));
-
-            return todos;
-        });
-
-    return todos;
+pub async fn list_todos() -> Result<Vec<Todo>, Box<dyn std::error::Error>> {
+    Ok(
+        Into::<Vec<TodoDatabaseResponse>>::into(DB.select("todo").await?)
+            .iter()
+            .map(|t| db_response_to_todo(t))
+            .collect::<Vec<Todo>>(),
+    )
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CreateTodoPayload {
     pub text: String,
 }
@@ -47,80 +42,72 @@ struct Referance {
     referance: u32,
 }
 
-pub async fn next_referance() -> Result<u32, ()> {
-    let result: DbResult<Option<Referance>> = DB.select(("referance", "static")).await;
+pub async fn next_referance() -> Result<u32, Box<dyn std::error::Error>> {
+    let next_ref: Option<Referance> = DB.select(("referance", "static")).await?;
 
-    let next_referance = result.map_err(|_| ())?;
-
-    match next_referance {
+    match next_ref {
         Some(r) => {
-            let next_ref: DbResult<Referance> = DB
-                .update(("referance", "static"))
+            DB.update(("referance", "static"))
                 .content(Referance {
                     referance: r.referance + 1,
                 })
-                .await;
-
-            next_ref.expect("next ref should be succesfully created");
+                .await?;
 
             return Ok(r.referance);
         }
         None => {
-            let next_ref: DbResult<Referance> = DB
+            let next_ref: Option<Referance> = DB
                 .update(("referance", "static"))
                 .content(Referance { referance: 2 })
-                .await;
-
-            next_ref.expect("next ref should be succesfully created");
+                .await?;
 
             return Ok(1);
         }
     }
 }
 
-pub async fn create_todo(payload: CreateTodoPayload) -> DbResult<TodoDatabaseResponse> {
-    let result: DbResult<TodoDatabaseResponse> = DB
+pub async fn create_todo(payload: CreateTodoPayload) -> Result<TodoDatabaseResponse, LithiumError> {
+    let referance = next_referance().await.map_err(|_| LithiumError::NotFound)?;
+
+    let result: Result<TodoDatabaseResponse, LithiumError> = DB
         .create(("todo", cuid2()))
         .content(CreateTodoInput {
-            text: payload.text,
-            referance: next_referance()
-                .await
-                .map_err(|_| surrealdb::error::Db::Ignore)?,
+            text: payload.text.clone(),
+            referance,
             complete: false,
         })
-        .await;
+        .await
+        .map_err(|_| LithiumError::Db);
 
     return result;
 }
 
-pub async fn update_todo(payload: Todo) -> DbResult<TodoDatabaseResponse> {
+pub async fn update_todo(payload: Todo) -> Result<TodoDatabaseResponse, surrealdb::Error> {
     let todo_id = &payload.id;
 
-    let result: DbResult<TodoDatabaseResponse> =
+    let result: Result<TodoDatabaseResponse, surrealdb::Error> =
         DB.update(("todo", todo_id)).content(payload).await;
 
     return result;
 }
 
-pub async fn delete_todo_by_id(id: String) -> DbResult<TodoDatabaseResponse> {
-    let result: DbResult<TodoDatabaseResponse> = DB.delete(("todo", id)).await;
-
-    return result;
+pub async fn delete_todo_by_id(id: String) -> Result<TodoDatabaseResponse, surrealdb::Error> {
+    DB.delete(("todo", id)).await
 }
 
 #[derive(Debug)]
 pub enum LithiumError {
-    Db(surrealdb::Error),
+    Db,
     NotFound,
 }
 
 pub async fn delete_todo_by_ref(ref_str: String) -> Result<(), LithiumError> {
-    let select_result: DbResult<Option<TodoDatabaseResponse>> = DB
+    let select_result: Result<Option<TodoDatabaseResponse>, surrealdb::Error> = DB
         .query("SELECT * FROM todo WHERE referance = $ref")
         .bind(("ref", ref_str))
         .await
         .map(|mut r| r.take(0))
-        .map_err(|e| LithiumError::Db(e))?;
+        .map_err(|_| LithiumError::Db)?;
 
     select_result.map_err(|_| LithiumError::NotFound)?;
 

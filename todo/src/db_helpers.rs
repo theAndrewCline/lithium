@@ -3,8 +3,6 @@ use surrealdb::sql::Thing;
 
 use crate::Todo;
 
-pub type DbResult<T> = Result<T, surrealdb::Error>;
-
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct TodoDatabaseResponse {
     id: Thing,
