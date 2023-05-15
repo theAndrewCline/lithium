@@ -47,10 +47,10 @@ struct Referance {
     referance: u32,
 }
 
-pub async fn next_referance() -> u32 {
+pub async fn next_referance() -> Result<u32, ()> {
     let result: DbResult<Option<Referance>> = DB.select(("referance", "static")).await;
 
-    let next_referance = result.expect("to have result");
+    let next_referance = result.map_err(|_| ())?;
 
     match next_referance {
         Some(r) => {
@@ -63,7 +63,7 @@ pub async fn next_referance() -> u32 {
 
             next_ref.expect("next ref should be succesfully created");
 
-            return r.referance;
+            return Ok(r.referance);
         }
         None => {
             let next_ref: DbResult<Referance> = DB
@@ -73,7 +73,7 @@ pub async fn next_referance() -> u32 {
 
             next_ref.expect("next ref should be succesfully created");
 
-            return 1;
+            return Ok(1);
         }
     }
 }
@@ -83,7 +83,9 @@ pub async fn create_todo(payload: CreateTodoPayload) -> DbResult<TodoDatabaseRes
         .create(("todo", cuid2()))
         .content(CreateTodoInput {
             text: payload.text,
-            referance: next_referance().await,
+            referance: next_referance()
+                .await
+                .map_err(|_| surrealdb::error::Db::Ignore)?,
             complete: false,
         })
         .await;
@@ -92,7 +94,7 @@ pub async fn create_todo(payload: CreateTodoPayload) -> DbResult<TodoDatabaseRes
 }
 
 pub async fn update_todo(payload: Todo) -> DbResult<TodoDatabaseResponse> {
-    let todo_id = payload.id.clone();
+    let todo_id = &payload.id;
 
     let result: DbResult<TodoDatabaseResponse> =
         DB.update(("todo", todo_id)).content(payload).await;
@@ -118,17 +120,13 @@ pub async fn delete_todo_by_ref(ref_str: String) -> Result<(), LithiumError> {
         .bind(("ref", ref_str))
         .await
         .map(|mut r| r.take(0))
-        .map_err(|e| LithiumError::Db(e))
-        .expect("to not explode");
+        .map_err(|e| LithiumError::Db(e))?;
 
-    let todo = select_result.and_then(|res| match res {
-        Some(t) => Ok(t),
-        None => Error(LithiumError::NotFound),
-    });
+    select_result.map_err(|_| LithiumError::NotFound)?;
 
     Ok(())
 }
 
-pub async fn complete_todo_by_ref(ref_str: String) -> Result<(), LithiumError> {
+pub async fn complete_todo_by_ref(_ref_str: String) -> Result<(), LithiumError> {
     Ok(())
 }
