@@ -23,20 +23,19 @@ enum ApiResponse {
     Error(String),
 }
 
-async fn list_todos_route() -> (StatusCode, Json<ApiResponse>) {
-    let todos = list_todos().await;
-
-    match todos {
-        Ok(todos) => (StatusCode::OK, Json(ApiResponse::Todos(todos))),
-        Err(err) => {
+async fn list_todos_route(
+) -> Result<(StatusCode, Json<ApiResponse>), (StatusCode, Json<ApiResponse>)> {
+    list_todos()
+        .await
+        .map(|todos| (StatusCode::OK, Json(ApiResponse::Todos(todos))))
+        .map_err(|err| {
             tracing::error!("error listing todos: {}", err);
 
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ApiResponse::Error(String::from("could not get todos"))),
             );
-        }
-    }
+        })
 }
 
 async fn create_todo_route(
