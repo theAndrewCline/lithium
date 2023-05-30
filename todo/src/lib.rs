@@ -16,13 +16,13 @@ pub struct Todo {
 
 pub static DB: Surreal<Any> = Surreal::init();
 
-pub async fn list_todos() -> Result<Vec<Todo>, Box<dyn std::error::Error>> {
-    Ok(
-        Into::<Vec<TodoDatabaseResponse>>::into(DB.select("todo").await?)
-            .iter()
-            .map(|t| db_response_to_todo(t))
-            .collect::<Vec<Todo>>(),
+pub async fn list_todos() -> Result<Vec<Todo>, TodoError> {
+    Ok(Into::<Vec<TodoDatabaseResponse>>::into(
+        DB.select("todo").await.map_err(|_| TodoError::DbError)?,
     )
+    .iter()
+    .map(|t| db_response_to_todo(t))
+    .collect::<Vec<Todo>>())
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -42,8 +42,16 @@ struct Referance {
     referance: u32,
 }
 
-pub async fn next_referance() -> Result<u32, Box<dyn std::error::Error>> {
-    let next_ref: Option<Referance> = DB.select(("referance", "static")).await?;
+pub enum TodoError {
+    DbError,
+    NotFound,
+}
+
+pub async fn next_referance() -> Result<u32, TodoError> {
+    let next_ref: Option<Referance> = DB
+        .select(("referance", "static"))
+        .await
+        .map_err(|_| TodoError::DbError)?;
 
     match next_ref {
         Some(r) => {
@@ -51,15 +59,16 @@ pub async fn next_referance() -> Result<u32, Box<dyn std::error::Error>> {
                 .content(Referance {
                     referance: r.referance + 1,
                 })
-                .await?;
+                .await
+                .map_err(|_| TodoError::DbError)?;
 
             return Ok(r.referance);
         }
         None => {
-            let next_ref: Option<Referance> = DB
-                .update(("referance", "static"))
+            DB.update(("referance", "static"))
                 .content(Referance { referance: 2 })
-                .await?;
+                .await
+                .map_err( | _ | TodoError::DbError)?;
 
             return Ok(1);
         }
