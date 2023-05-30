@@ -16,9 +16,11 @@ pub struct Todo {
 
 pub static DB: Surreal<Any> = Surreal::init();
 
-pub async fn list_todos() -> Result<Vec<Todo>, TodoError> {
+pub async fn list_todos() -> Result<Vec<Todo>, LithiumError> {
     Ok(Into::<Vec<TodoDatabaseResponse>>::into(
-        DB.select("todo").await.map_err(|_| TodoError::DbError)?,
+        DB.select("todo")
+            .await
+            .map_err(|err| LithiumError::Db(err.to_string()))?,
     )
     .iter()
     .map(|t| db_response_to_todo(t))
@@ -43,33 +45,34 @@ struct Referance {
 }
 
 #[derive(Debug)]
-pub enum TodoError {
-    DbError,
+pub enum LithiumError {
+    Db(String),
     NotFound,
 }
 
-pub async fn next_referance() -> Result<u32, TodoError> {
-    let next_ref: Option<Referance> = DB
-        .select(("referance", "static"))
-        .await
-        .map_err(|_| TodoError::DbError)?;
+pub async fn next_referance() -> Result<u32, LithiumError> {
+    let next_ref: Result<Referance, surrealdb::Error> = DB.select(("referance", "static")).await;
 
     match next_ref {
-        Some(r) => {
-            DB.update(("referance", "static"))
-                .content(Referance {
-                    referance: r.referance + 1,
-                })
-                .await
-                .map_err(|_| TodoError::DbError)?;
+        Ok(r) => {
+            Into::<Result<Referance, LithiumError>>::into(
+                DB.update(("referance", "static"))
+                    .content(Referance {
+                        referance: r.referance + 1,
+                    })
+                    .await
+                    .map_err(|err| LithiumError::Db(err.to_string())),
+            )?;
 
             return Ok(r.referance);
         }
-        None => {
-            DB.update(("referance", "static"))
-                .content(Referance { referance: 2 })
-                .await
-                .map_err( | _ | TodoError::DbError)?;
+        Err(_) => {
+            Into::<Result<Referance, LithiumError>>::into(
+                DB.update(("referance", "static"))
+                    .content(Referance { referance: 2 })
+                    .await
+                    .map_err(|err| LithiumError::Db(err.to_string())),
+            )?;
 
             return Ok(1);
         }
@@ -77,7 +80,7 @@ pub async fn next_referance() -> Result<u32, TodoError> {
 }
 
 pub async fn create_todo(payload: CreateTodoPayload) -> Result<TodoDatabaseResponse, LithiumError> {
-    let referance = next_referance().await.map_err(|_| LithiumError::NotFound)?;
+    let referance = next_referance().await?;
 
     let result: Result<TodoDatabaseResponse, LithiumError> = DB
         .create(("todo", cuid2()))
@@ -87,7 +90,7 @@ pub async fn create_todo(payload: CreateTodoPayload) -> Result<TodoDatabaseRespo
             complete: false,
         })
         .await
-        .map_err(|_| LithiumError::Db);
+        .map_err(|err| LithiumError::Db(err.to_string()));
 
     return result;
 }
@@ -105,19 +108,13 @@ pub async fn delete_todo_by_id(id: String) -> Result<TodoDatabaseResponse, surre
     DB.delete(("todo", id)).await
 }
 
-#[derive(Debug)]
-pub enum LithiumError {
-    Db,
-    NotFound,
-}
-
 pub async fn delete_todo_by_ref(ref_str: String) -> Result<(), LithiumError> {
     let select_result: Result<Option<TodoDatabaseResponse>, surrealdb::Error> = DB
         .query("SELECT * FROM todo WHERE referance = $ref")
         .bind(("ref", ref_str))
         .await
         .map(|mut r| r.take(0))
-        .map_err(|_| LithiumError::Db)?;
+        .map_err(|err| LithiumError::Db(err.to_string()))?;
 
     select_result.map_err(|_| LithiumError::NotFound)?;
 

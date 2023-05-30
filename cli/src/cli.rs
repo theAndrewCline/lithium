@@ -63,7 +63,7 @@ pub async fn run(handle: &mut StdoutLock<'static>) {
 
         ActionType::Delete(input) => match delete_todo_by_ref(input.referance).await {
             Ok(_) => writeln!(handle, "Delete successful!").expect("writing should work"),
-            _ => writeln!(handle, "Delete failed").expect("writing should work"),
+            Err(_) => writeln!(handle, "Delete failed").expect("writing should work"),
         },
     }
 }
