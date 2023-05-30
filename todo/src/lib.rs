@@ -42,6 +42,7 @@ struct Referance {
     referance: u32,
 }
 
+#[derive(Debug)]
 pub enum TodoError {
     DbError,
     NotFound,

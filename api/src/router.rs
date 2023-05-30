@@ -29,7 +29,7 @@ async fn list_todos_route(
         .await
         .map(|todos| (StatusCode::OK, Json(ApiResponse::Todos(todos))))
         .map_err(|err| {
-            tracing::error!("error listing todos: {}", err);
+            tracing::error!("error listing todos: {:?}", err);
 
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
