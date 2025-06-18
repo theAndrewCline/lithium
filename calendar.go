@@ -18,11 +18,11 @@ const (
 
 // Calendar represents a calendar with todos
 type Calendar struct {
-	db       *DB
-	date     time.Time
-	view     CalendarView
-	todos    []Todo
-	todoMap  map[string][]Todo // Key: YYYY-MM-DD, Value: todos for that day
+	db      *DB
+	date    time.Time
+	view    CalendarView
+	todos   []Todo
+	todoMap map[string][]Todo // Key: YYYY-MM-DD, Value: todos for that day
 }
 
 // NewCalendar creates a new calendar instance
@@ -103,7 +103,7 @@ func (c *Calendar) renderMonth() string {
 	// Get first day of month and calculate padding
 	firstDay := time.Date(c.date.Year(), c.date.Month(), 1, 0, 0, 0, 0, c.date.Location())
 	startDay := c.getStartOfWeek(firstDay)
-	
+
 	// Days of week header
 	weekdays := []string{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
 	headerStyle := lipgloss.NewStyle().
@@ -111,7 +111,7 @@ func (c *Calendar) renderMonth() string {
 		Bold(true).
 		Width(10).
 		Align(lipgloss.Center)
-	
+
 	for _, day := range weekdays {
 		s.WriteString(headerStyle.Render(day))
 	}
@@ -122,23 +122,23 @@ func (c *Calendar) renderMonth() string {
 	for week := 0; week < 6; week++ {
 		weekEmpty := true
 		var weekLine strings.Builder
-		
+
 		for day := 0; day < 7; day++ {
 			nextMonth := c.date.AddDate(0, 1, 0).Month()
-		if current.Month() == c.date.Month() || week < 1 || (week == 5 && current.Month() == nextMonth) {
+			if current.Month() == c.date.Month() || week < 1 || (week == 5 && current.Month() == nextMonth) {
 				weekEmpty = false
 			}
-			
+
 			dayStr := c.renderDay(current)
 			weekLine.WriteString(dayStr)
 			current = current.AddDate(0, 0, 1)
 		}
-		
+
 		if !weekEmpty || week < 4 {
 			s.WriteString(weekLine.String())
 			s.WriteString("\n")
 		}
-		
+
 		// Stop if we've gone past the month and filled at least 4 weeks
 		if week >= 3 && current.Month() != c.date.Month() {
 			break
@@ -150,7 +150,7 @@ func (c *Calendar) renderMonth() string {
 		s.WriteString("\n")
 		s.WriteString(titleStyle.Render("Scheduled for " + c.date.Format("January 2006") + ":"))
 		s.WriteString("\n\n")
-		
+
 		currentDate := ""
 		for _, todo := range c.todos {
 			if todo.ScheduledStart != nil {
@@ -163,22 +163,22 @@ func (c *Calendar) renderMonth() string {
 						Render(todoDate + ":"))
 					s.WriteString("\n")
 				}
-				
+
 				timeBlock := FormatTimeBlock(todo.ScheduledStart, todo.ScheduledEnd)
 				timeStr := ""
 				if timeBlock != "" {
 					timeStr = strings.TrimPrefix(timeBlock, "Scheduled: ")
 				}
-				
+
 				todoText := fmt.Sprintf("  • %s", todo.Title)
 				if timeStr != "" {
 					todoText += fmt.Sprintf(" (%s)", timeStr)
 				}
-				
+
 				if todo.Done {
 					todoText = completedStyle.Render(todoText)
 				}
-				
+
 				s.WriteString(todoText)
 				s.WriteString("\n")
 			}
@@ -196,8 +196,8 @@ func (c *Calendar) renderWeek() string {
 	endOfWeek := startOfWeek.AddDate(0, 0, 6)
 
 	// Week title
-	title := fmt.Sprintf("📅 Week of %s - %s", 
-		startOfWeek.Format("Jan 2"), 
+	title := fmt.Sprintf("📅 Week of %s - %s",
+		startOfWeek.Format("Jan 2"),
 		endOfWeek.Format("Jan 2, 2006"))
 	s.WriteString(titleStyle.Render(title))
 	s.WriteString("\n\n")
@@ -207,25 +207,25 @@ func (c *Calendar) renderWeek() string {
 	for i := 0; i < 7; i++ {
 		dayName := current.Format("Monday")
 		dayDate := current.Format("Jan 2")
-		
-		isToday := current.Year() == time.Now().Year() && 
+
+		isToday := current.Year() == time.Now().Year() &&
 			current.YearDay() == time.Now().YearDay()
-		
+
 		dayTitle := fmt.Sprintf("%s, %s", dayName, dayDate)
 		if isToday {
 			dayTitle += " (Today)"
 		}
-		
+
 		dayStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color(ColorBlue)).
 			Bold(true)
 		if isToday {
 			dayStyle = dayStyle.Foreground(lipgloss.Color(ColorYellow))
 		}
-		
+
 		s.WriteString(dayStyle.Render(dayTitle))
 		s.WriteString("\n")
-		
+
 		// Show todos for this day
 		dateKey := current.Format("2006-01-02")
 		if dayTodos, exists := c.todoMap[dateKey]; exists {
@@ -240,16 +240,16 @@ func (c *Calendar) renderWeek() string {
 						timeStr = strings.Join(parts[2:], " ")
 					}
 				}
-				
+
 				todoText := fmt.Sprintf("  • %s", todo.Title)
 				if timeStr != "" {
 					todoText += fmt.Sprintf(" (%s)", timeStr)
 				}
-				
+
 				if todo.Done {
 					todoText = completedStyle.Render(todoText)
 				}
-				
+
 				s.WriteString(todoText)
 				s.WriteString("\n")
 			}
@@ -257,7 +257,7 @@ func (c *Calendar) renderWeek() string {
 			s.WriteString(descStyle.Render("  No todos scheduled"))
 			s.WriteString("\n")
 		}
-		
+
 		s.WriteString("\n")
 		current = current.AddDate(0, 0, 1)
 	}
@@ -269,20 +269,20 @@ func (c *Calendar) renderWeek() string {
 func (c *Calendar) renderDay(date time.Time) string {
 	dayNum := date.Day()
 	dateKey := date.Format("2006-01-02")
-	
+
 	isCurrentMonth := date.Month() == c.date.Month()
-	isToday := date.Year() == time.Now().Year() && 
+	isToday := date.Year() == time.Now().Year() &&
 		date.YearDay() == time.Now().YearDay()
 	hasTodos := len(c.todoMap[dateKey]) > 0
-	
+
 	// Base style
 	cellStyle := lipgloss.NewStyle().
 		Width(10).
 		Height(1).
 		Align(lipgloss.Center)
-	
+
 	dayText := fmt.Sprintf("%2d", dayNum)
-	
+
 	if !isCurrentMonth {
 		// Grayed out for other months
 		cellStyle = cellStyle.Foreground(lipgloss.Color(ColorGray))
@@ -302,7 +302,7 @@ func (c *Calendar) renderDay(date time.Time) string {
 		// Regular day
 		cellStyle = cellStyle.Foreground(lipgloss.Color(ColorWhite))
 	}
-	
+
 	return cellStyle.Render(dayText)
 }
 
