@@ -38,15 +38,15 @@ type DB struct {
 	conn *sql.DB
 
 	// Prepared statements
-	insertTodo     *sql.Stmt
-	getAllTodos    *sql.Stmt
-	getInboxTodos  *sql.Stmt
-	getDateTodos   *sql.Stmt
-	getRangeTodos  *sql.Stmt
-	getMonthTodos  *sql.Stmt
-	updateTodo     *sql.Stmt
-	deleteTodo     *sql.Stmt
-	toggleTodo     *sql.Stmt
+	insertTodo    *sql.Stmt
+	getAllTodos   *sql.Stmt
+	getInboxTodos *sql.Stmt
+	getDateTodos  *sql.Stmt
+	getRangeTodos *sql.Stmt
+	getMonthTodos *sql.Stmt
+	updateTodo    *sql.Stmt
+	deleteTodo    *sql.Stmt
+	toggleTodo    *sql.Stmt
 }
 
 func NewDB(dbPath string) (*DB, error) {
@@ -128,26 +128,26 @@ func (db *DB) migrateTables() error {
 		var name, dataType string
 		var notNull, pk bool
 		var defaultValue interface{}
-		
+
 		err := rows.Scan(&cid, &name, &dataType, &notNull, &defaultValue, &pk)
 		if err != nil {
 			return err
 		}
-		
+
 		existingColumns[name] = true
 	}
 
 	// Add missing columns
 	columnsToAdd := []string{
 		"due_date DATETIME",
-		"scheduled_start DATETIME", 
+		"scheduled_start DATETIME",
 		"scheduled_end DATETIME",
 	}
 
 	for _, column := range columnsToAdd {
 		parts := strings.Fields(column)
 		columnName := parts[0]
-		
+
 		if !existingColumns[columnName] {
 			_, err = db.conn.Exec(fmt.Sprintf("ALTER TABLE todos ADD COLUMN %s", column))
 			if err != nil {
@@ -315,7 +315,7 @@ func (db *DB) GetInboxTodos() ([]Todo, error) {
 func (db *DB) GetDateTodos(date time.Time) ([]Todo, error) {
 	// Format date as YYYY-MM-DD for SQLite DATE() function
 	dateStr := date.Format("2006-01-02")
-	
+
 	rows, err := db.getDateTodos.Query(dateStr)
 	if err != nil {
 		return nil, err
@@ -354,7 +354,7 @@ func (db *DB) GetRangeTodos(startDate, endDate time.Time) ([]Todo, error) {
 	// Format dates as YYYY-MM-DD for SQLite DATE() function
 	startStr := startDate.Format("2006-01-02")
 	endStr := endDate.Format("2006-01-02")
-	
+
 	rows, err := db.getRangeTodos.Query(startStr, endStr)
 	if err != nil {
 		return nil, err
@@ -387,7 +387,7 @@ func (db *DB) GetRangeTodos(startDate, endDate time.Time) ([]Todo, error) {
 func (db *DB) GetMonthTodos(date time.Time) ([]Todo, error) {
 	// Format date as YYYY-MM-DD for SQLite strftime function
 	dateStr := date.Format("2006-01-02")
-	
+
 	rows, err := db.getMonthTodos.Query(dateStr)
 	if err != nil {
 		return nil, err
@@ -438,7 +438,7 @@ func (db *DB) ScheduleTodo(id int, scheduledStart, scheduledEnd *time.Time) erro
 	if err != nil {
 		return err
 	}
-	
+
 	_, err = db.conn.Exec(scheduleSQL, scheduledStart, scheduledEnd, id)
 	return err
 }
