@@ -16,6 +16,7 @@ const (
 	tuiTodayView tuiState = iota
 	tuiInboxView
 	tuiCalendarView
+	tuiCaptureView
 	tuiAddView
 	tuiEditView
 )
@@ -44,6 +45,7 @@ type keyMap struct {
 	Today    key.Binding
 	Inbox    key.Binding
 	Calendar key.Binding
+	Capture  key.Binding
 	Up       key.Binding
 	Down     key.Binding
 	Toggle   key.Binding
@@ -65,6 +67,10 @@ var defaultKeyMap = keyMap{
 	Calendar: key.NewBinding(
 		key.WithKeys("c"),
 		key.WithHelp("c", "calendar"),
+	),
+	Capture: key.NewBinding(
+		key.WithKeys("x"),
+		key.WithHelp("x", "capture"),
 	),
 	Up: key.NewBinding(
 		key.WithKeys("up", "k"),
@@ -98,14 +104,14 @@ var defaultKeyMap = keyMap{
 
 // ShortHelp returns keybindings to be shown in the mini help view
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Toggle, k.New, k.Today, k.Inbox, k.Calendar, k.Quit}
+	return []key.Binding{k.Up, k.Down, k.Toggle, k.New, k.Today, k.Inbox, k.Calendar, k.Capture, k.Quit}
 }
 
 // FullHelp returns keybindings for the expanded help view
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Toggle, k.New, k.Edit, k.Delete},
-		{k.Today, k.Inbox, k.Calendar, k.Quit},
+		{k.Today, k.Inbox, k.Calendar, k.Capture, k.Quit},
 	}
 }
 
@@ -137,20 +143,24 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		// Handle global navigation keys first
 		switch {
-		case key.Matches(msg, m.keys.Today) && m.state != tuiAddView && m.state != tuiEditView:
+		case key.Matches(msg, m.keys.Today) && m.state != tuiAddView && m.state != tuiEditView && m.state != tuiCaptureView:
 			m.state = tuiTodayView
 			todos, _ := m.db.GetTodayTodos()
 			m.todos = todos
 			m.cursor = 0
 			return m, nil
-		case key.Matches(msg, m.keys.Inbox) && m.state != tuiAddView && m.state != tuiEditView:
+		case key.Matches(msg, m.keys.Inbox) && m.state != tuiAddView && m.state != tuiEditView && m.state != tuiCaptureView:
 			m.state = tuiInboxView
 			todos, _ := m.db.GetInboxTodos()
 			m.todos = todos
 			m.cursor = 0
 			return m, nil
-		case key.Matches(msg, m.keys.Calendar) && m.state != tuiAddView && m.state != tuiEditView:
+		case key.Matches(msg, m.keys.Calendar) && m.state != tuiAddView && m.state != tuiEditView && m.state != tuiCaptureView:
 			m.state = tuiCalendarView
+			return m, nil
+		case key.Matches(msg, m.keys.Capture) && m.state != tuiAddView && m.state != tuiEditView:
+			m.state = tuiCaptureView
+			m.input = ""
 			return m, nil
 		case key.Matches(msg, m.keys.Quit):
 			return m, tea.Quit
@@ -164,6 +174,8 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateToday(msg)
 		case tuiCalendarView:
 			return m.updateCalendar(msg)
+		case tuiCaptureView:
+			return m.updateCapture(msg)
 		case tuiAddView:
 			return m.updateAdd(msg)
 		case tuiEditView:
@@ -323,6 +335,40 @@ func (m tuiModel) updateCalendar(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "w":
 		m.calendar = NewCalendar(m.db, m.calendar.GetDate(), WeekView)
 		m.calendar.LoadTodos()
+	}
+	return m, nil
+}
+
+func (m tuiModel) updateCapture(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c", "esc":
+		m.state = tuiInboxView
+		todos, _ := m.db.GetInboxTodos()
+		m.todos = todos
+		m.cursor = 0
+		return m, nil
+	case "enter":
+		if strings.TrimSpace(m.input) != "" {
+			// Parse the input - look for " -- " separator for description
+			parts := strings.SplitN(m.input, " -- ", 2)
+			title := strings.TrimSpace(parts[0])
+			desc := ""
+			if len(parts) > 1 {
+				desc = strings.TrimSpace(parts[1])
+			}
+			
+			// Add todo to inbox (no scheduling)
+			m.db.AddTodo(title, desc, nil, nil, nil)
+			m.input = "" // Clear for next todo
+		}
+	case "backspace":
+		if len(m.input) > 0 {
+			m.input = m.input[:len(m.input)-1]
+		}
+	default:
+		if len(msg.String()) == 1 { // Only add printable characters
+			m.input += msg.String()
+		}
 	}
 	return m, nil
 }
@@ -489,6 +535,8 @@ func (m tuiModel) View() string {
 		content = m.viewToday()
 	case tuiCalendarView:
 		content = m.viewCalendar()
+	case tuiCaptureView:
+		return m.viewCapture() // This view has its own help
 	case tuiAddView:
 		return m.viewAdd() // These views have their own help
 	case tuiEditView:
@@ -509,6 +557,7 @@ func (m tuiModel) renderTabHeader() string {
 	todayTab := "📅 Today"
 	inboxTab := "📥 Inbox"
 	calendarTab := "🗓️ Calendar"
+	captureTab := "🎯 Capture"
 	
 	// Highlight active tab
 	switch m.state {
@@ -518,9 +567,11 @@ func (m tuiModel) renderTabHeader() string {
 		inboxTab = tuiSelectedStyle.Render(inboxTab)
 	case tuiCalendarView:
 		calendarTab = tuiSelectedStyle.Render(calendarTab)
+	case tuiCaptureView:
+		captureTab = tuiSelectedStyle.Render(captureTab)
 	}
 	
-	tabs = append(tabs, todayTab, inboxTab, calendarTab)
+	tabs = append(tabs, todayTab, inboxTab, calendarTab, captureTab)
 	
 	header := strings.Join(tabs, " | ")
 	return tuiTitleStyle.Render("⚡ Lithium") + "\n" + header + "\n\n"
@@ -735,6 +786,32 @@ func (m tuiModel) viewCalendar() string {
 	
 	s.WriteString("\n")
 
+	
+	return tuiContainerStyle.Render(s.String())
+}
+
+func (m tuiModel) viewCapture() string {
+	var s strings.Builder
+	
+	s.WriteString(tuiTitleStyle.Render("🎯 Capture - Brain Dump Mode"))
+	s.WriteString("\n\n")
+	
+	s.WriteString(tuiLabelStyle.Render("Type todos quickly, one per line:"))
+	s.WriteString("\n\n")
+	
+	// Current input line
+	inputLine := tuiInputStyle.Render(m.input)
+	inputLine += tuiInputStyle.Render("█") // Cursor
+	s.WriteString(fmt.Sprintf("> %s\n", inputLine))
+	
+	s.WriteString("\n")
+	s.WriteString(tuiHelpStyle.Render("Enter: save todo and start next"))
+	s.WriteString("\n")
+	s.WriteString(tuiHelpStyle.Render("Use ' -- ' to separate title and description"))
+	s.WriteString("\n")
+	s.WriteString(tuiHelpStyle.Render("Example: 'Buy milk -- get the organic kind'"))
+	s.WriteString("\n")
+	s.WriteString(tuiHelpStyle.Render("Esc: return to inbox"))
 	
 	return tuiContainerStyle.Render(s.String())
 }
