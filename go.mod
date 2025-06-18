@@ -1,4 +1,4 @@
-module github.com/thteAndrewCline/lithium
+module github.com/theAndrewCline/lithium
 
 go 1.23.8
 
