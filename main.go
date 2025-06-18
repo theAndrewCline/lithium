@@ -28,7 +28,7 @@ func main() {
 	cli := NewCLI(db)
 
 	if len(os.Args) < 2 {
-		cli.HandleCommand("help", nil)
+		cli.HandleCommand("ui", nil)
 		return
 	}
 

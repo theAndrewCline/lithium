@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/help"
 )
 
 type tuiState int
@@ -24,6 +25,7 @@ type tuiModel struct {
 	todos          []Todo
 	cursor         int
 	state          tuiState
+	previousState  tuiState
 	input          string
 	inputDesc      string
 	inputDue       string
@@ -35,12 +37,19 @@ type tuiModel struct {
 	inputField     int // 0: title, 1: description, 2: due date, 3: scheduled time
 	calendar       *Calendar
 	keys           keyMap
+	help           help.Model
 }
 
 type keyMap struct {
 	Today    key.Binding
 	Inbox    key.Binding
 	Calendar key.Binding
+	Up       key.Binding
+	Down     key.Binding
+	Toggle   key.Binding
+	New      key.Binding
+	Edit     key.Binding
+	Delete   key.Binding
 	Quit     key.Binding
 }
 
@@ -57,10 +66,47 @@ var defaultKeyMap = keyMap{
 		key.WithKeys("c"),
 		key.WithHelp("c", "calendar"),
 	),
+	Up: key.NewBinding(
+		key.WithKeys("up", "k"),
+		key.WithHelp("↑/k", "up"),
+	),
+	Down: key.NewBinding(
+		key.WithKeys("down", "j"),
+		key.WithHelp("↓/j", "down"),
+	),
+	Toggle: key.NewBinding(
+		key.WithKeys(" ", "enter"),
+		key.WithHelp("space/enter", "toggle"),
+	),
+	New: key.NewBinding(
+		key.WithKeys("n"),
+		key.WithHelp("n", "new todo"),
+	),
+	Edit: key.NewBinding(
+		key.WithKeys("e"),
+		key.WithHelp("e", "edit"),
+	),
+	Delete: key.NewBinding(
+		key.WithKeys("d"),
+		key.WithHelp("d", "delete"),
+	),
 	Quit: key.NewBinding(
 		key.WithKeys("q", "ctrl+c"),
 		key.WithHelp("q", "quit"),
 	),
+}
+
+// ShortHelp returns keybindings to be shown in the mini help view
+func (k keyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Up, k.Down, k.Toggle, k.New, k.Today, k.Inbox, k.Calendar, k.Quit}
+}
+
+// FullHelp returns keybindings for the expanded help view
+func (k keyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Up, k.Down, k.Toggle, k.New, k.Edit, k.Delete},
+		{k.Today, k.Inbox, k.Calendar, k.Quit},
+	}
 }
 
 func NewTuiModel(db *DB) tuiModel {
@@ -75,6 +121,7 @@ func NewTuiModel(db *DB) tuiModel {
 		state:    tuiTodayView,
 		calendar: NewCalendar(db, time.Now(), MonthView),
 		keys:     defaultKeyMap,
+		help:     help.New(),
 	}
 }
 
@@ -137,6 +184,7 @@ func (m tuiModel) updateInbox(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.cursor++
 		}
 	case "n":
+		m.previousState = m.state
 		m.state = tuiAddView
 		m.input = ""
 		m.inputDesc = ""
@@ -163,6 +211,7 @@ func (m tuiModel) updateInbox(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "e":
 		if len(m.todos) > 0 {
 			todo := m.todos[m.cursor]
+			m.previousState = m.state
 			m.state = tuiEditView
 			m.editingID = todo.ID
 			m.input = todo.Title
@@ -202,6 +251,7 @@ func (m tuiModel) updateToday(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.cursor++
 		}
 	case "n":
+		m.previousState = m.state
 		m.state = tuiAddView
 		m.input = ""
 		m.inputDesc = ""
@@ -228,6 +278,7 @@ func (m tuiModel) updateToday(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "e":
 		if len(m.todos) > 0 {
 			todo := m.todos[m.cursor]
+			m.previousState = m.state
 			m.state = tuiEditView
 			m.editingID = todo.ID
 			m.input = todo.Title
@@ -276,15 +327,28 @@ func (m tuiModel) updateCalendar(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// returnToPreviousState returns to the state before entering add/edit mode
+func (m *tuiModel) returnToPreviousState() {
+	m.state = m.previousState
+	switch m.previousState {
+	case tuiTodayView:
+		todos, _ := m.db.GetTodayTodos()
+		m.todos = todos
+	case tuiInboxView:
+		todos, _ := m.db.GetInboxTodos()
+		m.todos = todos
+	case tuiCalendarView:
+		// Calendar doesn't need todo reloading since it manages its own data
+	}
+}
+
 func (m tuiModel) updateAdd(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+c":
 		return m, tea.Quit
 	case "esc":
-		// Return to the previous view (default to today)
-		m.state = tuiTodayView
-		todos, _ := m.db.GetTodayTodos()
-		m.todos = todos
+		// Return to the previous view
+		m.returnToPreviousState()
 	case "enter":
 		if strings.TrimSpace(m.input) != "" {
 			// Parse due date and scheduled time
@@ -304,10 +368,8 @@ func (m tuiModel) updateAdd(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			
 			m.db.AddTodo(m.input, m.inputDesc, dueDate, scheduledStart, scheduledEnd)
-			// Return to today view after adding
-			m.state = tuiTodayView
-			todos, _ := m.db.GetTodayTodos()
-			m.todos = todos
+			// Return to previous view after adding
+			m.returnToPreviousState()
 		}
 	case "tab":
 		m.inputField = (m.inputField + 1) % 4
@@ -352,10 +414,8 @@ func (m tuiModel) updateEdit(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+c":
 		return m, tea.Quit
 	case "esc":
-		// Return to today view
-		m.state = tuiTodayView
-		todos, _ := m.db.GetTodayTodos()
-		m.todos = todos
+		// Return to previous view
+		m.returnToPreviousState()
 	case "enter":
 		if strings.TrimSpace(m.input) != "" {
 			// Parse due date and scheduled time
@@ -375,10 +435,8 @@ func (m tuiModel) updateEdit(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			
 			m.db.UpdateTodo(m.editingID, m.input, m.inputDesc, dueDate, scheduledStart, scheduledEnd)
-			// Return to today view after editing
-			m.state = tuiTodayView
-			todos, _ := m.db.GetTodayTodos()
-			m.todos = todos
+			// Return to previous view after editing
+			m.returnToPreviousState()
 		}
 	case "tab":
 		m.inputField = (m.inputField + 1) % 4
@@ -423,19 +481,23 @@ func (m tuiModel) View() string {
 		return fmt.Sprintf("Error: %v\n", m.err)
 	}
 	
+	var content string
 	switch m.state {
 	case tuiInboxView:
-		return m.viewInbox()
+		content = m.viewInbox()
 	case tuiTodayView:
-		return m.viewToday()
+		content = m.viewToday()
 	case tuiCalendarView:
-		return m.viewCalendar()
+		content = m.viewCalendar()
 	case tuiAddView:
-		return m.viewAdd()
+		return m.viewAdd() // These views have their own help
 	case tuiEditView:
-		return m.viewEdit()
+		return m.viewEdit() // These views have their own help
 	}
-	return ""
+	
+	// Add help at bottom for main views
+	helpView := m.help.View(m.keys)
+	return content + "\n" + helpView
 }
 
 
@@ -595,10 +657,7 @@ func (m tuiModel) viewInbox() string {
 		}
 	}
 	
-	s.WriteString(tuiHelpStyle.Render(`
-Commands:
-  ↑/k: up, ↓/j: down, Space/Enter: toggle
-  n: new todo, e: edit, d: delete, t: today, c: calendar, q: quit`))
+
 	
 	return tuiContainerStyle.Render(s.String())
 }
@@ -654,10 +713,7 @@ func (m tuiModel) viewToday() string {
 		}
 	}
 	
-	s.WriteString(tuiHelpStyle.Render(`
-Commands:
-  ↑/k: up, ↓/j: down, Space/Enter: toggle
-  n: new todo, e: edit, d: delete, i: inbox, c: calendar, q: quit`))
+
 	
 	return tuiContainerStyle.Render(s.String())
 }
@@ -678,10 +734,7 @@ func (m tuiModel) viewCalendar() string {
 	}
 	
 	s.WriteString("\n")
-	s.WriteString(tuiHelpStyle.Render(`
-Commands:
-  ←/h: prev month, →/l: next month, m: month view, w: week view
-  t: today, i: inbox, q: quit`))
+
 	
 	return tuiContainerStyle.Render(s.String())
 }
