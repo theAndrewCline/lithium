@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/tursodatabase/go-libsql"
+	"github.com/tursodatabase/go-libsql"
 )
 
 //go:embed sql/*.sql
@@ -49,18 +49,27 @@ type DB struct {
 	toggleTodo    *sql.Stmt
 }
 
-func NewDB(dbPath string) (*DB, error) {
-	conn, err := sql.Open("libsql", dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
+func NewDB(dbPath string, syncUrl *string) (*DB, error) {
+
+	var conn *sql.DB
+
+	if syncUrl == nil {
+		c, err := sql.Open("libsql", dbPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open database: %w", err)
+		}
+
+		conn = c
+	} else {
+		connector, err := libsql.NewEmbeddedReplicaConnector(dbPath, *syncUrl)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open sync url or database: %w", err)
+		}
+
+		conn = sql.OpenDB(connector)
 	}
 
 	db := &DB{conn: conn}
-
-	// Enable WAL mode for better concurrency and performance
-	if err := db.enableWAL(); err != nil {
-		return nil, fmt.Errorf("failed to enable WAL mode: %w", err)
-	}
 
 	if err := db.createTables(); err != nil {
 		return nil, fmt.Errorf("failed to create tables: %w", err)
@@ -71,32 +80,6 @@ func NewDB(dbPath string) (*DB, error) {
 	}
 
 	return db, nil
-}
-
-func (db *DB) enableWAL() error {
-	// Enable WAL mode
-	_, err := db.conn.Exec("PRAGMA journal_mode=WAL")
-	if err != nil {
-		return err
-	}
-
-	// Set other performance optimizations
-	_, err = db.conn.Exec("PRAGMA synchronous=NORMAL")
-	if err != nil {
-		return err
-	}
-
-	_, err = db.conn.Exec("PRAGMA cache_size=1000")
-	if err != nil {
-		return err
-	}
-
-	_, err = db.conn.Exec("PRAGMA temp_store=MEMORY")
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (db *DB) createTables() error {

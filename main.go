@@ -18,7 +18,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	db, err := NewDB(config.DatabasePath)
+	db, err := NewDB(config.DatabasePath, config.SyncUrl)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
