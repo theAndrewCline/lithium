@@ -72,13 +72,10 @@ var (
 
 	tuiSelectedStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color(ColorWhite)).
-				Background(lipgloss.Color(ColorBlue)).
-				Bold(true).
-				Padding(0, 1)
+				Bold(true)
 
 	tuiDoneStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color(ColorGreen)).
-			Strikethrough(true)
+			Foreground(lipgloss.Color(ColorGray))
 
 	tuiHelpStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color(ColorGray)).
@@ -87,7 +84,7 @@ var (
 	tuiInputStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color(ColorWhite)).
 			Bold(true)
-	
+
 	tuiLabelStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color(ColorBlue)).
 			Bold(true)
@@ -117,7 +114,7 @@ func styleCommand(text string) string {
 // Helper function to create status styling
 func createStatusStyle(done bool) (string, lipgloss.Color) {
 	if done {
-		return "☑", lipgloss.Color(ColorGreen)
+		return "[x]", lipgloss.Color(ColorGreen)
 	}
-	return "☐", lipgloss.Color(ColorOrange)
+	return "[ ]", lipgloss.Color(ColorOrange)
 }

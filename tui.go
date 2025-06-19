@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbletea"
 )
 
 type tuiState int
@@ -120,7 +120,7 @@ func NewTuiModel(db *DB) tuiModel {
 	if err != nil {
 		return tuiModel{db: db, err: err}
 	}
-	
+
 	return tuiModel{
 		db:       db,
 		todos:    todos,
@@ -165,7 +165,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Quit):
 			return m, tea.Quit
 		}
-		
+
 		// Handle state-specific keys
 		switch m.state {
 		case tuiInboxView:
@@ -228,24 +228,24 @@ func (m tuiModel) updateInbox(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.editingID = todo.ID
 			m.input = todo.Title
 			m.inputDesc = todo.Description
-			
+
 			// Format current due date and scheduled time for editing
 			m.inputDue = ""
 			if todo.DueDate != nil {
 				m.inputDue = todo.DueDate.Format("2006-01-02")
 			}
-			
+
 			m.inputScheduled = ""
 			if todo.ScheduledStart != nil {
 				if todo.ScheduledEnd != nil {
-					m.inputScheduled = fmt.Sprintf("%s-%s", 
-						todo.ScheduledStart.Format("3:04pm"), 
+					m.inputScheduled = fmt.Sprintf("%s-%s",
+						todo.ScheduledStart.Format("3:04pm"),
 						todo.ScheduledEnd.Format("3:04pm"))
 				} else {
 					m.inputScheduled = todo.ScheduledStart.Format("3:04pm")
 				}
 			}
-			
+
 			m.inputField = 0
 		}
 	}
@@ -295,24 +295,24 @@ func (m tuiModel) updateToday(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.editingID = todo.ID
 			m.input = todo.Title
 			m.inputDesc = todo.Description
-			
+
 			// Format current due date and scheduled time for editing
 			m.inputDue = ""
 			if todo.DueDate != nil {
 				m.inputDue = todo.DueDate.Format("2006-01-02")
 			}
-			
+
 			m.inputScheduled = ""
 			if todo.ScheduledStart != nil {
 				if todo.ScheduledEnd != nil {
-					m.inputScheduled = fmt.Sprintf("%s-%s", 
-						todo.ScheduledStart.Format("3:04pm"), 
+					m.inputScheduled = fmt.Sprintf("%s-%s",
+						todo.ScheduledStart.Format("3:04pm"),
 						todo.ScheduledEnd.Format("3:04pm"))
 				} else {
 					m.inputScheduled = todo.ScheduledStart.Format("3:04pm")
 				}
 			}
-			
+
 			m.inputField = 0
 		}
 	}
@@ -356,7 +356,7 @@ func (m tuiModel) updateCapture(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if len(parts) > 1 {
 				desc = strings.TrimSpace(parts[1])
 			}
-			
+
 			// Add todo to inbox (no scheduling)
 			m.db.AddTodo(title, desc, nil, nil, nil)
 			m.input = "" // Clear for next todo
@@ -399,20 +399,20 @@ func (m tuiModel) updateAdd(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if strings.TrimSpace(m.input) != "" {
 			// Parse due date and scheduled time
 			var dueDate, scheduledStart, scheduledEnd *time.Time
-			
+
 			if m.inputDue != "" {
 				if parsed, err := ParseDueDate(m.inputDue); err == nil {
 					dueDate = parsed
 				}
 			}
-			
+
 			if m.inputScheduled != "" {
 				if timeBlock, err := ParseTimeBlock(m.inputScheduled); err == nil && timeBlock != nil {
 					scheduledStart = timeBlock.Start
 					scheduledEnd = timeBlock.End
 				}
 			}
-			
+
 			m.db.AddTodo(m.input, m.inputDesc, dueDate, scheduledStart, scheduledEnd)
 			// Return to previous view after adding
 			m.returnToPreviousState()
@@ -466,20 +466,20 @@ func (m tuiModel) updateEdit(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if strings.TrimSpace(m.input) != "" {
 			// Parse due date and scheduled time
 			var dueDate, scheduledStart, scheduledEnd *time.Time
-			
+
 			if m.inputDue != "" {
 				if parsed, err := ParseDueDate(m.inputDue); err == nil {
 					dueDate = parsed
 				}
 			}
-			
+
 			if m.inputScheduled != "" {
 				if timeBlock, err := ParseTimeBlock(m.inputScheduled); err == nil && timeBlock != nil {
 					scheduledStart = timeBlock.Start
 					scheduledEnd = timeBlock.End
 				}
 			}
-			
+
 			m.db.UpdateTodo(m.editingID, m.input, m.inputDesc, dueDate, scheduledStart, scheduledEnd)
 			// Return to previous view after editing
 			m.returnToPreviousState()
@@ -526,7 +526,7 @@ func (m tuiModel) View() string {
 	if m.err != nil {
 		return fmt.Sprintf("Error: %v\n", m.err)
 	}
-	
+
 	var content string
 	switch m.state {
 	case tuiInboxView:
@@ -542,23 +542,21 @@ func (m tuiModel) View() string {
 	case tuiEditView:
 		return m.viewEdit() // These views have their own help
 	}
-	
+
 	// Add help at bottom for main views
 	helpView := m.help.View(m.keys)
 	return content + "\n" + helpView
 }
 
-
-
 // renderTabHeader creates a tab-style header for navigation
 func (m tuiModel) renderTabHeader() string {
 	var tabs []string
-	
+
 	todayTab := "📅 Today"
 	inboxTab := "📥 Inbox"
 	calendarTab := "🗓️ Calendar"
 	captureTab := "🎯 Capture"
-	
+
 	// Highlight active tab
 	switch m.state {
 	case tuiTodayView:
@@ -570,19 +568,19 @@ func (m tuiModel) renderTabHeader() string {
 	case tuiCaptureView:
 		captureTab = tuiSelectedStyle.Render(captureTab)
 	}
-	
+
 	tabs = append(tabs, todayTab, inboxTab, calendarTab, captureTab)
-	
+
 	header := strings.Join(tabs, " | ")
 	return tuiTitleStyle.Render("⚡ Lithium") + "\n" + header + "\n\n"
 }
 
 func (m tuiModel) viewAdd() string {
 	var s strings.Builder
-	
+
 	s.WriteString(tuiTitleStyle.Render("⚡ Add New Todo"))
 	s.WriteString("\n\n")
-	
+
 	// Title field with cursor indicator
 	titleLabel := tuiLabelStyle.Render("Title: ")
 	titleValue := tuiInputStyle.Render(m.input)
@@ -590,15 +588,15 @@ func (m tuiModel) viewAdd() string {
 		titleValue += tuiInputStyle.Render("█") // Cursor
 	}
 	s.WriteString(fmt.Sprintf("%s%s\n", titleLabel, titleValue))
-	
-	// Description field with cursor indicator  
+
+	// Description field with cursor indicator
 	descLabel := tuiLabelStyle.Render("Description: ")
 	descValue := tuiInputStyle.Render(m.inputDesc)
 	if m.inputField == 1 {
 		descValue += tuiInputStyle.Render("█") // Cursor
 	}
 	s.WriteString(fmt.Sprintf("%s%s\n", descLabel, descValue))
-	
+
 	// Due date field with cursor indicator
 	dueLabel := tuiLabelStyle.Render("Due Date: ")
 	dueValue := tuiInputStyle.Render(m.inputDue)
@@ -606,7 +604,7 @@ func (m tuiModel) viewAdd() string {
 		dueValue += tuiInputStyle.Render("█") // Cursor
 	}
 	s.WriteString(fmt.Sprintf("%s%s\n", dueLabel, dueValue))
-	
+
 	// Scheduled time field with cursor indicator
 	schedLabel := tuiLabelStyle.Render("Scheduled: ")
 	schedValue := tuiInputStyle.Render(m.inputScheduled)
@@ -614,20 +612,20 @@ func (m tuiModel) viewAdd() string {
 		schedValue += tuiInputStyle.Render("█") // Cursor
 	}
 	s.WriteString(fmt.Sprintf("%s%s\n", schedLabel, schedValue))
-	
+
 	s.WriteString(tuiHelpStyle.Render("\nTab: switch fields, Enter: save, Esc: cancel"))
 	s.WriteString(tuiHelpStyle.Render("\nDue Date: today, tomorrow, 2024-12-25"))
 	s.WriteString(tuiHelpStyle.Render("\nScheduled: today 2pm-4pm, Monday 9am for 2 hours"))
-	
+
 	return tuiContainerStyle.Render(s.String())
 }
 
 func (m tuiModel) viewEdit() string {
 	var s strings.Builder
-	
+
 	s.WriteString(tuiTitleStyle.Render("⚡ Edit Todo"))
 	s.WriteString("\n\n")
-	
+
 	// Title field with cursor indicator
 	titleLabel := tuiLabelStyle.Render("Title: ")
 	titleValue := tuiInputStyle.Render(m.input)
@@ -635,15 +633,15 @@ func (m tuiModel) viewEdit() string {
 		titleValue += tuiInputStyle.Render("█") // Cursor
 	}
 	s.WriteString(fmt.Sprintf("%s%s\n", titleLabel, titleValue))
-	
-	// Description field with cursor indicator  
+
+	// Description field with cursor indicator
 	descLabel := tuiLabelStyle.Render("Description: ")
 	descValue := tuiInputStyle.Render(m.inputDesc)
 	if m.inputField == 1 {
 		descValue += tuiInputStyle.Render("█") // Cursor
 	}
 	s.WriteString(fmt.Sprintf("%s%s\n", descLabel, descValue))
-	
+
 	// Due date field with cursor indicator
 	dueLabel := tuiLabelStyle.Render("Due Date: ")
 	dueValue := tuiInputStyle.Render(m.inputDue)
@@ -651,7 +649,7 @@ func (m tuiModel) viewEdit() string {
 		dueValue += tuiInputStyle.Render("█") // Cursor
 	}
 	s.WriteString(fmt.Sprintf("%s%s\n", dueLabel, dueValue))
-	
+
 	// Scheduled time field with cursor indicator
 	schedLabel := tuiLabelStyle.Render("Scheduled: ")
 	schedValue := tuiInputStyle.Render(m.inputScheduled)
@@ -659,19 +657,19 @@ func (m tuiModel) viewEdit() string {
 		schedValue += tuiInputStyle.Render("█") // Cursor
 	}
 	s.WriteString(fmt.Sprintf("%s%s\n", schedLabel, schedValue))
-	
+
 	s.WriteString(tuiHelpStyle.Render("\nTab: switch fields, Enter: save, Esc: cancel"))
 	s.WriteString(tuiHelpStyle.Render("\nDue Date: today, tomorrow, 2024-12-25"))
 	s.WriteString(tuiHelpStyle.Render("\nScheduled: today 2pm-4pm, Monday 9am for 2 hours"))
-	
+
 	return tuiContainerStyle.Render(s.String())
 }
 
 func (m tuiModel) viewInbox() string {
 	var s strings.Builder
-	
+
 	s.WriteString(m.renderTabHeader())
-	
+
 	if len(m.todos) == 0 {
 		s.WriteString("No unscheduled todos. All todos are scheduled!\n")
 	} else {
@@ -680,14 +678,14 @@ func (m tuiModel) viewInbox() string {
 			if m.cursor == i {
 				cursor = ">"
 			}
-			
-			status := "☐"
+
+			status := "[ ]"
 			title := todo.Title
 			if todo.Done {
-				status = "☑"
+				status = "[x]"
 				title = tuiDoneStyle.Render(title)
 			}
-			
+
 			line := fmt.Sprintf("%s %s %s", cursor, status, title)
 			if todo.Description != "" {
 				desc := todo.Description
@@ -698,26 +696,24 @@ func (m tuiModel) viewInbox() string {
 				}
 				line += fmt.Sprintf(" - %s", desc)
 			}
-			
+
 			if m.cursor == i {
 				line = tuiSelectedStyle.Render(line)
 			}
-			
+
 			s.WriteString(line)
 			s.WriteString("\n")
 		}
 	}
-	
 
-	
 	return tuiContainerStyle.Render(s.String())
 }
 
 func (m tuiModel) viewToday() string {
 	var s strings.Builder
-	
+
 	s.WriteString(m.renderTabHeader())
-	
+
 	if len(m.todos) == 0 {
 		s.WriteString("No todos scheduled for today.\n")
 	} else {
@@ -726,16 +722,16 @@ func (m tuiModel) viewToday() string {
 			if m.cursor == i {
 				cursor = ">"
 			}
-			
-			status := "☐"
+
+			status := "[ ]"
 			title := todo.Title
 			if todo.Done {
-				status = "☑"
+				status = "[x]"
 				title = tuiDoneStyle.Render(title)
 			}
-			
+
 			line := fmt.Sprintf("%s %s %s", cursor, status, title)
-			
+
 			// Show time if scheduled
 			if todo.ScheduledStart != nil {
 				timeStr := todo.ScheduledStart.Format("15:04")
@@ -744,7 +740,7 @@ func (m tuiModel) viewToday() string {
 				}
 				line += fmt.Sprintf(" [%s]", timeStr)
 			}
-			
+
 			if todo.Description != "" {
 				desc := todo.Description
 				if todo.Done {
@@ -754,26 +750,24 @@ func (m tuiModel) viewToday() string {
 				}
 				line += fmt.Sprintf(" - %s", desc)
 			}
-			
+
 			if m.cursor == i {
 				line = tuiSelectedStyle.Render(line)
 			}
-			
+
 			s.WriteString(line)
 			s.WriteString("\n")
 		}
 	}
-	
 
-	
 	return tuiContainerStyle.Render(s.String())
 }
 
 func (m tuiModel) viewCalendar() string {
 	var s strings.Builder
-	
+
 	s.WriteString(m.renderTabHeader())
-	
+
 	// Load and render calendar
 	err := m.calendar.LoadTodos()
 	if err != nil {
@@ -783,27 +777,26 @@ func (m tuiModel) viewCalendar() string {
 		calendarStr := m.calendar.Render()
 		s.WriteString(calendarStr)
 	}
-	
+
 	s.WriteString("\n")
 
-	
 	return tuiContainerStyle.Render(s.String())
 }
 
 func (m tuiModel) viewCapture() string {
 	var s strings.Builder
-	
+
 	s.WriteString(tuiTitleStyle.Render("🎯 Capture - Brain Dump Mode"))
 	s.WriteString("\n\n")
-	
+
 	s.WriteString(tuiLabelStyle.Render("Type todos quickly, one per line:"))
 	s.WriteString("\n\n")
-	
+
 	// Current input line
 	inputLine := tuiInputStyle.Render(m.input)
 	inputLine += tuiInputStyle.Render("█") // Cursor
 	s.WriteString(fmt.Sprintf("> %s\n", inputLine))
-	
+
 	s.WriteString("\n")
 	s.WriteString(tuiHelpStyle.Render("Enter: save todo and start next"))
 	s.WriteString("\n")
@@ -812,7 +805,7 @@ func (m tuiModel) viewCapture() string {
 	s.WriteString(tuiHelpStyle.Render("Example: 'Buy milk -- get the organic kind'"))
 	s.WriteString("\n")
 	s.WriteString(tuiHelpStyle.Render("Esc: return to inbox"))
-	
+
 	return tuiContainerStyle.Render(s.String())
 }
 
