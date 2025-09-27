@@ -1,2 +1,4 @@
 li
 bin
+node_modules
+dist

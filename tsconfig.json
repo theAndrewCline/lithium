@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "outDir": "dist",
+    "module": "nodenext",
+    "target": "es2022"
+  },
+  "include": ["src"]
+}
